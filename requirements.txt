@@ -1,4 +1,4 @@
 --index-url https://pypi.python.org/simple/
 
-iCE=2.1.0-dev
+iCE==2.1.0-dev
 ipython==5.1.0
