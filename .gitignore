@@ -1,0 +1,18 @@
+# Mac
+._*
+.DS_STORE
+.DS_Store
+
+# Python byte-code
+*.pyc
+*.pyo
+
+# Local configuration
+config/local/*
+
+# IDE
+.ropeproject
+
+# Coverage
+.coverage
+coveragereport

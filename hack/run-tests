@@ -1,0 +1,72 @@
+#!/bin/bash
+set -e
+
+usage() {
+  echo "Usage:"
+  echo "run-tests               --- run all the tests"
+  echo "run-tests -c            --- create coverage report"
+  echo "run-tests -m <Module>   --- only run tests in given module"
+  echo "run-tests -v            --- run tests in verbose mode"
+  echo "run-tests -h            --- print help menu"
+}
+
+run_nose() {
+  # command
+  cmd="nosetests"
+  if [ $WITH_COVERAGE -eq 1 ]; then
+    cmd=$cmd" --with-coverage"
+    cmd=$cmd" --cover-package ice"
+    cmd=$cmd" --cover-html"
+    cmd=$cmd" --cover-erase"
+    cmd=$cmd" --cover-html-dir coveragereport"
+  fi
+  cmd=$cmd" -v"
+  [ "$MODULE" != "" ] && cmd=$cmd" $MODULE"
+
+  echo "[INFO] About to run '$cmd'"
+
+  # run tests but don't blow up
+  echo "--------- Nose output START ---------"
+  set +e
+  eval $cmd
+  NOSE_EXIT_CODE=$?
+  set -e
+  echo "--------- Nose output END ---------"
+
+  echo "[INFO] Nose exited with code $NOSE_EXIT_CODE"
+}
+
+MODULE=""
+VERBOSE=0
+WITH_COVERAGE=0
+while getopts "m:cvh" OPTION
+do
+  case $OPTION in
+    m)
+      MODULE=$OPTARG
+      ;;
+    c)
+      WITH_COVERAGE=1
+      ;;
+    v)
+      VERBOSE=1
+      ;;
+    h)
+      usage
+      exit
+      ;;
+    *)
+      usage
+      exit
+      ;;
+  esac
+done
+
+echo "[DEBUG] module='$MODULE'"
+echo "[DEBUG] with_coverage=$WITH_COVERAGE"
+echo "[DEBUG] verbose=$VERBOSE"
+
+# some action...
+run_nose
+
+exit $NOSE_EXIT_CODE

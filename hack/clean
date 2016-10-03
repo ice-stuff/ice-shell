@@ -1,0 +1,7 @@
+#!/bin/bash
+set -e
+
+BASE_PATH=$(cd $(dirname $BASH_SOURCE)/.. && pwd)
+
+cd $BASE_PATH
+rm -Rf build/ dist/ iCE_shell.egg-info
