@@ -77,22 +77,16 @@ class EC2Shell(ShellExt):
             '%s EC2 VMs were successfully deleted.' % len(self._instances)
         )
 
-    def _get_spec(self, cloud_id=None):
-        if cloud_id is None:
-            cloud_ids = self.cfg_factory.get_ec2_cloud_ids()
-            if len(cloud_ids) == 0:
-                return None
-            cloud_id = cloud_ids[0]
+    def _get_default_cloud_id(self):
+        cloud_ids = self.cfg_factory.get_ec2_cloud_ids()
+        if len(cloud_ids) == 0:
+            return None
+        return cloud_ids[0]
 
+    def _get_spec(self, cloud_id=None):
         return self.cfg_factory.get_ec2_vm_spec(cloud_id)
 
     def _get_client(self, cloud_id=None):
-        if cloud_id is None:
-            cloud_ids = self.cfg_factory.get_ec2_cloud_ids()
-            if len(cloud_ids) == 0:
-                return None
-            cloud_id = cloud_ids[0]
-
         return ec2_client.EC2Client(
             self.cfg_factory.get_ec2_cloud_auth(cloud_id),
             self.logger
@@ -111,7 +105,11 @@ class EC2Shell(ShellExt):
 
     def run_ls(self, args):
         """Lists EC2 instances."""
-        reservations = self._get_client(args.cloud_id).get_list()
+        cloud_id = args.cloud_id
+        if cloud_id is None:
+            cloud_id = self._get_default_cloud_id()
+
+        reservations = self._get_client(cloud_id).get_list()
 
         table = self._get_instances_table()
 
@@ -141,7 +139,11 @@ class EC2Shell(ShellExt):
 
     def run_create(self, args):
         """Creates new EC2 instances."""
-        spec = self._get_spec(args.cloud_id)
+        cloud_id = args.cloud_id
+        if cloud_id is None:
+            cloud_id = self._get_default_cloud_id()
+
+        spec = self._get_spec(cloud_id)
         if args.ami_id is not None:
             spec.ami_id = args.ami_id
         if args.flavor is not None:
@@ -152,7 +154,7 @@ class EC2Shell(ShellExt):
             self.cfg_factory.get_registry_client()
         )
 
-        reservation = self._get_client(args.cloud_id).create(args.amt, spec)
+        reservation = self._get_client(cloud_id).create(args.amt, spec)
         if reservation is None:
             self.logger.error('Failed to run instances!')
             return
@@ -163,7 +165,7 @@ class EC2Shell(ShellExt):
         for inst in reservation.instances:
             self._instances[inst.id] = {
                 'inst': inst,
-                'cloud_id': args.cloud_id
+                'cloud_id': cloud_id
             }
 
             table.add_row({
@@ -197,7 +199,11 @@ class EC2Shell(ShellExt):
 
     def run_destroy(self, args):
         """Destroys existing EC2 instances."""
-        instances = self._get_client(args.cloud_id).destroy(args.instance_ids)
+        cloud_id = args.cloud_id
+        if cloud_id is None:
+            cloud_id = self._get_default_cloud_id()
+
+        instances = self._get_client(cloud_id).destroy(args.instance_ids)
 
         table = self._get_instances_table()
         for inst in instances:
