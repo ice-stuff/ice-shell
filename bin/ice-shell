@@ -34,7 +34,7 @@ if __name__ == '__main__':
     cfg_factory = _get_config_factory()
 
     reg_cfg = cfg_factory.get_registry_client()
-    registry = client.RegistryClient(reg_cfg.host, reg_cfg.port)
+    registry = client.RegistryClient(reg_cfg)
 
     shell_cfg = cfg_factory.get_shell()
 
