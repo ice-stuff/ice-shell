@@ -119,15 +119,31 @@ class RegistryShell(ShellExt):
             return
 
         for inst_id in inst_ids:
+            print('-' * 80)
+            print('Instance {:s}'.format(inst_id))
+            print('-' * 80)
+
             inst = self.registry.get_instance(inst_id)
             if inst is None:
                 self.logger.error('Failed to find instance `%s`!' % inst_id)
                 continue
 
-            # Printout information
-            for key, value in inst.__dict__.items():
+            # Compose info
+            info = [
+                ('Session Id', inst.session_id),
+                ('Public IP address', inst.public_ip_addr),
+                ('Public reverse DNS', inst.public_reverse_dns),
+                ('SSH username', inst.ssh_username),
+                ('SSH port', inst.ssh_port),
+                ('SSH authorized fingerprint', inst.ssh_authorized_fingerprint)
+            ]
+
+            # Printout info
+            for key, value in info:
                 print('{}:'.format(key))
                 print('  {}'.format(value))
+
+            print('-' * 80)
 
     def del_inst(self, *inst_ids):
         """Deletes a specific instance."""
