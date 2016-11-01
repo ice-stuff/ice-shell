@@ -1,6 +1,8 @@
+import os
+import pwd
 import unittest2
 import ConfigParser
-from ice import ec2_client
+from ice import experiment, ec2_client
 from ice_shell import config
 import ice.registry.server as reg_server
 import ice.registry.client as reg_client
@@ -15,6 +17,7 @@ class TestConfigFactory(unittest2.TestCase):
         self.cfg.add_section('shell')
         self.cfg.add_section('registry_client')
         self.cfg.add_section('ec2')
+        self.cfg.add_section('experiment')
 
         self.config_factory = config.ConfigFactory(self.cfg)
 
@@ -25,6 +28,10 @@ class TestConfigFactory(unittest2.TestCase):
         self.addTypeEqualityFunc(reg_client.CfgRegistryClient,
                                  self.assertObjectEqual)
         self.addTypeEqualityFunc(reg_server.CfgRegistryServer,
+                                 self.assertObjectEqual)
+        self.addTypeEqualityFunc(ice_shell.CfgShell,
+                                 self.assertObjectEqual)
+        self.addTypeEqualityFunc(experiment.CfgSSH,
                                  self.assertObjectEqual)
 
     def assertObjectEqual(self, a, b, **kwargs):
@@ -221,29 +228,37 @@ class TestGetRegstryServer(TestConfigFactory):
 
 class TestGetShell(TestConfigFactory):
     def test(self):
-        self.cfg.set('shell', 'ssh_id_file_path', '/path/to/file')
         self.cfg.set('shell', 'debug', '1')
 
-        self.assertObjectEqual(
+        self.assertEqual(
             self.config_factory.get_shell(),
-            ice_shell.CfgShell(
-                ssh_id_file_path='/path/to/file',
-                debug=True
-            )
+            ice_shell.CfgShell(debug=True)
         )
 
     def test_defaults(self):
-        self.cfg.set('shell', 'ssh_id_file_path', '/path/to/file')
-
-        self.assertObjectEqual(
+        self.assertEqual(
             self.config_factory.get_shell(),
-            ice_shell.CfgShell(
-                ssh_id_file_path='/path/to/file',
+            ice_shell.CfgShell(debug=False)
+        )
+
+
+class TestGetExperimentSSH(TestConfigFactory):
+    def test_defaults(self):
+        pw = pwd.getpwuid(os.getuid())
+        self.assertEqual(
+            self.config_factory.get_experiment_ssh(),
+            experiment.CfgSSH(
+                pw.pw_name, os.path.join(pw.pw_dir, '.ssh', 'id_rsa')
             )
         )
 
-    def test_missing_ssh_id_file_path(self):
-        self.cfg.set('shell', 'debug', '1')
+    def test_all_provided(self):
+        self.cfg.set('experiment', 'ssh_username', 'ubuntu')
+        self.cfg.set(
+            'experiment', 'ssh_key_path', '/home/user/keypairs/id_rsa_ice'
+        )
 
-        with self.assertRaises(config.ConfigFactory.OptionNotFound):
-            self.config_factory.get_shell()
+        self.assertEqual(
+            self.config_factory.get_experiment_ssh(),
+            experiment.CfgSSH('ubuntu', '/home/user/keypairs/id_rsa_ice')
+        )

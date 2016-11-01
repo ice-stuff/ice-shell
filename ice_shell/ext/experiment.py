@@ -3,19 +3,22 @@ import os
 from ice import experiment
 from . import ShellExt
 
+RUN_EXP_USAGE = '<Experiment name> [<Tag key>=<Tag value>]' + \
+    ' <Task or runner name> [<Arguments> ...]'
+
 
 class ExperimentShell(ShellExt):
     """Wrapper class for Fabric-related shell commands."""
 
-    def __init__(self, registry, ssh_id_file_path, logger, debug=False):
+    def __init__(self, registry, ssh_cfg, logger, debug=False):
         """
         :param ice.registry.client.RegistryClient registry:
-        :param string ssh_id_file_path:
+        :param ice.experiment.CfgSSH ssh_cfg:
         :param logging.Logger logger:
         :param bool debug: Set to True for debug behaviour.
         """
         self.registry = registry
-        self.ssh_id_file_path = ssh_id_file_path
+        self.ssh_cfg = ssh_cfg
         self._experiments = {}
         super(ExperimentShell, self).__init__(logger, debug)
 
@@ -35,10 +38,7 @@ class ExperimentShell(ShellExt):
         shell.add_command(
             'exp_ls', self.ls_exp, usage='<Experiment name>'
         )
-        shell.add_command(
-            'exp_run', self.run_exp,
-            usage='<Experiment name> <Task or runner name> [<Arguments> ...]'
-        )
+        shell.add_command('exp_run', self.run_exp, usage=RUN_EXP_USAGE)
 
     def load_exp(self, *args):
         """Loads an experiment to iCE."""
@@ -98,33 +98,85 @@ class ExperimentShell(ShellExt):
             print('Tasks:')
             print('\n'.join(tasks))
 
+    def _parse_run_exp_args(self, args):
+        # empty?
+        if len(args) == 0:
+            return None
+
+        parsed_args = {
+            'experiment_name': args.pop(0),
+            'tag_key': None,
+            'tag_value': None,
+            'func_name': 'run',
+            'args': []
+        }
+
+        # that's it?
+        if len(args) == 0:
+            return parsed_args
+        # has tag?
+        if '=' in args[0]:
+            tag_pair = args.pop(0)
+            tag_parts = tag_pair.split('=', 1)
+            if len(tag_parts) != 2:
+                return parsed_args
+            parsed_args['tag_key'] = tag_parts[0]
+            parsed_args['tag_value'] = tag_parts[1]
+        # that's it?
+        if len(args) == 0:
+            return parsed_args
+        # the rest
+        parsed_args['func_name'] = args.pop(0)
+        parsed_args['args'] = args
+
+        return parsed_args
+
+    def _find_experiment(self, experiment_name):
+        if experiment_name not in self._experiments:
+            return None
+        return self._experiments[experiment_name]
+
+    def _filter_instances(self, instances, tag_key, tag_value):
+        if tag_key is None:
+            return instances
+
+        ret_val = []
+        for inst in instances:
+            if tag_key not in inst.tags:
+                continue  # can't find tag by this key
+            if tag_value is not None and inst.tags[tag_key] != tag_value:
+                continue  # tag value is not the required one
+            ret_val.append(inst)
+
+        return ret_val
+
     def run_exp(self, *args):
         """Runs a task or an experiment."""
-        args = list(args)
-
-        try:
-            experiment_name = args.pop(0)
-            # Is experiment loaded?
-            if experiment_name not in self._experiments:
-                self.logger.error(
-                    'Experiment `%s` is not loaded!' % experiment_name
-                )
-                return
-            exp = self._experiments[experiment_name]
-        except IndexError:
-            self.logger.error('Please specify experiment name!')
+        parsed_args = self._parse_run_exp_args(list(args))
+        if parsed_args is None:
+            self.logger.error('USAGE: exp_run {:s}'.format(RUN_EXP_USAGE))
             return
 
-        try:
-            func_name = args.pop(0)
-        except IndexError:
-            func_name = 'run'  # default
+        exp = self._find_experiment(parsed_args['experiment_name'])
+        if exp is None:
+            self.logger.error('Experiment `{:s}` is not loaded!'.format(
+                parsed_args['experiment_name']
+            ))
+            return
 
         instances = self.registry.get_instances_list(self.shell.get_session())
+        filtered_instances = self._filter_instances(
+            instances, parsed_args['tag_key'], parsed_args['tag_value']
+        )
+        if len(filtered_instances) == 0:
+            self.logger.info('No instances to run against')
+            return
+
         res = exp.run(
-            instances, self.ssh_id_file_path, func_name, args=args
+            filtered_instances, self.ssh_cfg,
+            parsed_args['func_name'], args=parsed_args['args']
         )
         if res is False:
-            self.logger.error(
-                'Task `%s.%s` failed!' % (experiment_name, func_name)
-            )
+            self.logger.error('Task `{:s}.{:s}` failed!'.format(
+                parsed_args['experiment_name'], parsed_args['func_name']
+            ))

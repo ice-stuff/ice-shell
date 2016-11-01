@@ -1,6 +1,8 @@
 """Configuration object factory"""
+import os
+import pwd
 import ConfigParser
-from ice import ec2_client
+from ice import experiment, ec2_client
 from ice.registry import client
 from ice.registry import server
 from . import CfgShell
@@ -25,6 +27,25 @@ class ConfigFactory(object):
             parser.
         """
         self.cfg = configuration(config_parser)
+
+    def get_experiment_ssh(self):
+        """Creates a configuration object for experiment SSH.
+
+        :rtype: `ice.experiment.CfgSSH`
+        :return: Configuration object for experiment SSH.
+        """
+        pw = pwd.getpwuid(os.getuid())
+
+        def_username = pw.pw_name
+        username = self.cfg.get_str(
+            'experiment', 'ssh_username', default_value=def_username
+        )
+        def_key_path = os.path.join(pw.pw_dir, '.ssh', 'id_rsa')
+        key_path = self.cfg.get_str(
+            'experiment', 'ssh_key_path', default_value=def_key_path
+        )
+
+        return experiment.CfgSSH(username, key_path)
 
     def get_ec2_cloud_ids(self):
         """List of cloud ids, found in configuration.
@@ -122,8 +143,6 @@ class ConfigFactory(object):
         :return: The ice_shell configuration object.
         """
         return CfgShell(
-            ssh_id_file_path=self.cfg.get_str('shell', 'ssh_id_file_path',
-                                              required=True),
             debug=self.cfg.get_bool('shell', 'debug', default_value=False)
         )
 

@@ -7,12 +7,10 @@ from ice import entities
 
 
 class CfgShell(object):
-    def __init__(self, ssh_id_file_path, debug=False):
+    def __init__(self, debug=False):
         """
-        :param string ssh_id_file_path: The path to the SSH id file.
         :param bool debug:
         """
-        self.ssh_id_file_path = ssh_id_file_path
         self.debug = debug
 
 
