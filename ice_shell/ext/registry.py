@@ -137,6 +137,8 @@ class RegistryShell(ShellExt):
                 ('SSH port', inst.ssh_port),
                 ('SSH authorized fingerprint', inst.ssh_authorized_fingerprint)
             ]
+            for key, value in inst.tags.items():
+                info.append(('Tag.{:s}'.format(key), value))
 
             # Printout info
             for key, value in info:
