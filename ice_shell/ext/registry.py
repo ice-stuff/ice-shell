@@ -61,7 +61,7 @@ class RegistryShell(ShellExt):
             table.add_row({
                 'id': inst.id,
                 'public_ip_addr': inst.public_ip_addr,
-                'cloud_id': inst.cloud_id
+                'cloud_id': inst.tags.get('cloud_id', 'Unknown')
             })
 
         print(ascii_table.ASCIITableRenderer().render(table))
