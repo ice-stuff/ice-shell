@@ -3,7 +3,6 @@ import os
 import sys
 import ConfigParser
 import logging
-import ice
 from ice.registry import client
 import ice_shell
 from ice_shell import config, ext
@@ -11,7 +10,7 @@ from ice_shell import config, ext
 
 def _get_config_factory():
     cfg = ConfigParser.SafeConfigParser()
-    for dir_path in ice.CONFIG_DIRS:
+    for dir_path in ice_shell.CONFIG_DIRS:
         file_path = os.path.join(dir_path, "ice.ini")
         if os.path.isfile(file_path):
             cfg.read(file_path)
@@ -20,7 +19,7 @@ def _get_config_factory():
 
 
 def _get_logger():
-    for dir_path in ice.CONFIG_DIRS:
+    for dir_path in ice_shell.CONFIG_DIRS:
         file_path = os.path.join(dir_path, "logging.ini")
         if os.path.isfile(file_path):
             logging.config.fileConfig(file_path)
