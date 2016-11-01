@@ -131,11 +131,28 @@ class EC2Shell(ShellExt):
             '-n', type=int, metavar='<Amount>', dest='amt', default=1
         )
         parser.add_argument('-i', metavar='<AMI Id>', dest='ami_id')
-        parser.add_argument('-t', metavar='<Type>', dest='flavor')
+        parser.add_argument('-f', metavar='<Flavor>', dest='flavor')
         parser.add_argument(
             '-c', metavar='<Cloud Id>', dest='cloud_id', default=None
         )
+        parser.add_argument(
+            '-t', metavar='<Tag key>=<Tag value>', dest='tags', nargs='+'
+        )
         return parser
+
+    def _parse_tags(self, tags_list):
+        tags_dict = {}
+        for tag_pair in tags_list:
+            tag_parts = tag_pair.split('=', 2)
+            if len(tag_parts) != 2:
+                self.logger.error(
+                    'Failed to parse tag `{:s}`. Ignoring!'.format(
+                        tag_pair
+                    )
+                )
+                continue
+            tags_dict[tag_parts[0]] = tag_parts[1]
+        return tags_dict
 
     def run_create(self, args):
         """Creates new EC2 instances."""
@@ -149,9 +166,21 @@ class EC2Shell(ShellExt):
         if args.flavor is not None:
             spec.flavor = args.flavor
 
+        tags_dict = {
+            'cloud_id': cloud_id,
+            'flavor': spec.flavor,
+            'ami_id': spec.ami_id
+        }
+        user_tags_dict = {}
+        if args.tags is not None:
+            user_tags_dict = self._parse_tags(args.tags)
+        for key, value in user_tags_dict.items():
+            tags_dict[key] = value
+
         spec.user_data = self.registry.compile_user_data(
             self.shell.get_session(),
-            self.cfg_factory.get_registry_client()
+            self.cfg_factory.get_registry_client(),
+            **tags_dict
         )
 
         reservation = self._get_client(cloud_id).create(args.amt, spec)
