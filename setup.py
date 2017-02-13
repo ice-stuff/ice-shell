@@ -4,7 +4,7 @@ import setuptools
 setuptools.setup(
     # Metadata
     name='iCE_shell',
-    version='2.1.0-dev',
+    version='2.1.0',
     author='George Lestaris',
     author_email='glestaris@gmail.com',
     description='Interactive cloud experiments and monitoring',
@@ -17,7 +17,7 @@ setuptools.setup(
 
     # Dependencies
     install_requires=[
-        'iCE==2.1.0-dev',
+        'iCE==2.1.0',
         'IPython>=5.1.0'
     ],
 
