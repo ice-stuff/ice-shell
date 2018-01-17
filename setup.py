@@ -17,7 +17,7 @@ setuptools.setup(
 
     # Dependencies
     install_requires=[
-        'iCE==2.1.0',
+        'iCE>=2.1.1',
         'IPython>=5.1.0'
     ],
 
